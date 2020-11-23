@@ -73,10 +73,19 @@ WSGI_APPLICATION = 'Grafik.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
+password = str()
+user = str()
+with open('./Grafik/password.txt', 'r') as file:
+    password = file.read().replace('\n', '')
+with open('./Grafik/user.txt', 'r') as file:
+    user = file.read().replace('\n', '')
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'grafikdb',
+        'USER': user,
+        'PASSWORD': password,
     }
 }
 
