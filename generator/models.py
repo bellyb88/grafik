@@ -1,5 +1,6 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.auth.models import User
+
 
 # Create your models here.
 DZIEN_CHOICES = (('None','None'), ('0','Poniedzialek'), ('1','Wtorek'), ('2','Sroda'), ('3','Czwartek'), ('4','Piatek'), ('5','Sobota'), ('6','Niedziela'),('14','Pon-Pt'),('15','Pon-Sb'), ('56','Weekend'), ('Wszystkie','Wszystkie'),  )
@@ -12,6 +13,7 @@ class Plan(models.Model):
 
     nazwa = models.CharField(max_length=200, db_index=True)
     slug = models.SlugField(max_length=200, unique=True, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 class Dni_swiateczne(models.Model):
     class Meta:

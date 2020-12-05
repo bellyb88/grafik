@@ -1,0 +1,15 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Panel główny{% endblock %}
+
+{% block content %}
+  <h1>Panel główny</h1>
+  <p>Witaj w panelu głównym. Możesz <a href="{% url "front:edit" %}">edytować profil</a> lub <a href="{% url "password_change" %}">zmienić hasło</a>.</p>
+<br>
+<hr>
+<a href="{%url 'front:plan_create'%}">Stwórz nowy plan</a>
+<hr>
+{%for plan in plany%}
+<a href="{% url 'front:plan_update' plan.id %}">{{plan.nazwa}}</a> <br>
+{%endfor%}
+{% endblock %}
