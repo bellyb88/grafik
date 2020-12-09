@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Pracownik{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <a href ="{%url 'front:pracownik_update' object.id%}" > {{object.nazwisko}}  {{object.imie}}</a>
+     <a href ="{%url 'front:pracownik_delete' object.id%}" > Usuń</a>
+{{pracownik.plan}}
+</div>
+<hr>
+<a href="{%url 'front:prosba_update' object.id %}">Dodaj prosby</a>
+<a href="{%url 'front:urlop_update' object.id %}">Dodaj urlopy</a>
+{%endblock%}

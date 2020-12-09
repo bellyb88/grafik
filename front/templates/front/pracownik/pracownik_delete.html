@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Usuń plan{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+           Usuń pracownika
+        </div>
+<form method="post">{% csrf_token %}
+    <p>Jesteś pewny żeby usunąć pracownika:  "{{ object.nazwisko }} {{object.imie}}"?</p>
+    <input type="submit" value="Confirm">
+</form>
+    </div>
+</div>
+{%endblock%}

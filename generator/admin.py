@@ -7,11 +7,16 @@ class ProsbaInline(admin.TabularInline):
     model = Prosba
     form = ProsbaForm
 
+class UrlopInline(admin.TabularInline):
+    model = Urlop
+    form = UrlopForm
+
 @admin.register(Pracownik)
 class PracownikAdmin(admin.ModelAdmin):
-    list_display = ['numer','nazwisko','imie','get_dyzury' , 'email','adres']
+    list_display = ['numer','nazwisko','imie','get_dyzury' , 'ilosc_godzin']
     prepopulated_fields = {'slug':('nazwisko','imie')}
-    inlines = [ProsbaInline,]
+    inlines = [ProsbaInline, UrlopInline]
+
   #  list_editable = ['nazwisko', 'imie',  'email', 'adres']
     def get_dyzury(self,obj):
         dzien = len([x for x in obj.pracownicy_dzien.all()])

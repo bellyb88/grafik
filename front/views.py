@@ -1,17 +1,20 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.utils.text import slugify
+from django.views.generic import DetailView, TemplateView
+
 from .forms import *
 from .models import Profile
+from generator.models import Regula, Pracownik
 from django.contrib import messages
 
 from generator.models import Plan, Dni_swiateczne
-from django.views.generic.edit import CreateView, UpdateView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 
 
 @login_required
@@ -58,6 +61,8 @@ class PlanUpdate(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         data = super(PlanUpdate, self).get_context_data(**kwargs)
+        data['reguly'] = Regula.objects.all().filter(plan = self.object)
+        data['pracownicy'] = Pracownik.objects.all().filter(plan = self.object)
         if self.request.POST:
             data['dni_swiateczne'] = DzienSwiatecznyFormSet(self.request.POST, instance=self.object)
         else:
@@ -78,6 +83,149 @@ class PlanUpdate(LoginRequiredMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('front:plan_update',  kwargs={'pk': self.object.pk})
+
+class PlanDelete(LoginRequiredMixin, DeleteView):
+    model = Plan
+    template_name = 'front/plan_delete.html'
+    success_url = reverse_lazy('front:dashboard')
+
+
+class RegulaCreate(LoginRequiredMixin, CreateView):
+    model = Regula
+    form_class = RegulaForm
+    template_name = 'front/regula_create.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            form.instance.slug = slugify(form.instance.nazwa)
+            self.object = form.save()
+        return super(RegulaCreate, self).form_valid(form)
+
+class RegulaUpdate(LoginRequiredMixin, UpdateView):
+    model = Regula
+    form_class = RegulaForm
+    template_name = 'front/regula_update.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            form.instance.slug = slugify(form.instance.nazwa)
+            self.object = form.save()
+        return super(RegulaUpdate, self).form_valid(form)
+
+class RegulaDelete(LoginRequiredMixin, DeleteView):
+    model = Regula
+    template_name = 'front/regula_delete.html'
+    success_url = reverse_lazy('front:dashboard')
+
+
+
+class PracownikCreate(LoginRequiredMixin, CreateView):
+    model = Pracownik
+    fields = ['numer','nazwisko', 'imie', 'email', 'adres']
+    template_name = 'front/pracownik/pracownik_create.html'
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            form.instance.slug = slugify(form.instance.nazwisko +form.instance.imie)
+            form.instance.plan = get_object_or_404(Plan, id=self.kwargs.get('pk'))
+            self.object = form.save()
+        return super(PracownikCreate, self).form_valid(form)
+
+
+
+    def get_success_url(self):
+        return reverse_lazy('front:plan_update', kwargs={'pk': self.kwargs.get('pk')})
+
+
+
+class PracownikDetail(LoginRequiredMixin, DetailView):
+    model = Pracownik
+    template_name = 'front/pracownik/pracownik_detail.html'
+
+
+
+
+class UrlopUpdate(LoginRequiredMixin, UpdateView):
+    model = Pracownik
+    template_name = 'front/pracownik/urlop_update.html'
+    form_class = PracownikUrlopForm
+
+    def get_context_data(self, **kwargs):
+        data = super(UrlopUpdate, self).get_context_data(**kwargs)
+        if self.request.POST:
+            data['urlopy'] = UrlopFormSet(self.request.POST, instance=self.object)
+
+        else:
+            data['urlopy'] = UrlopFormSet(instance=self.object)
+        return data
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        urlopy = context['urlopy']
+        with transaction.atomic():
+            self.object = form.save()
+            if urlopy.is_valid():
+                urlopy.instance = self.object
+                urlopy.save()
+        return super(UrlopUpdate, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('front:pracownik_detail', kwargs={'pk': self.object.id})
+
+class ProsbaUpdate(LoginRequiredMixin, UpdateView):
+    model = Pracownik
+    template_name = 'front/pracownik/prosba_update.html'
+    form_class = PracownikProsbaForm
+
+    def get_context_data(self, **kwargs):
+        data = super(ProsbaUpdate, self).get_context_data(**kwargs)
+        if self.request.POST:
+            data['prosby'] = ProsbaFormSet(self.request.POST, instance=self.object)
+
+        else:
+
+            data['prosby'] = ProsbaFormSet(instance=self.object)
+        return data
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        prosby = context['prosby']
+        with transaction.atomic():
+            self.object = form.save()
+            if prosby.is_valid():
+                prosby.instance = self.object
+                prosby.save()
+        return super(ProsbaUpdate, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('front:pracownik_detail', kwargs={'pk': self.object.id})
+
+
+class PracownikDelete(LoginRequiredMixin, DeleteView):
+    model = Pracownik
+    template_name = 'front/pracownik/pracownik_delete.html'
+    success_url = reverse_lazy('front:dashboard')
+
+class PracownikUpdate(LoginRequiredMixin, UpdateView):
+    model = Pracownik
+    fields = ['numer', 'nazwisko', 'imie', 'email', 'adres' ]
+    template_name = 'front/pracownik/pracownik_update.html'
+
+
+
+
+
+
 
 @login_required
 def edit(request):

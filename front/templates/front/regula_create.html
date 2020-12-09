@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Nowy plan{% endblock %}
+{% block title %}Nowa regula{% endblock %}
 
 {% load crispy_forms_tags %}
 {% block content %}
 <div class="container">
     <div class="card">
         <div class="card-header">
-            Nowy plan
+            Nowa regula
         </div>
-        <div class="card-body">
-             {% crispy form %}
-        </div>
+<form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Save">
+</form>
     </div>
 </div>
 {%endblock%}

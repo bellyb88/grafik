@@ -1,3 +1,5 @@
+import itertools
+
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Q
 import calendar
@@ -90,6 +92,9 @@ def oblicz_kalendarz(plan, data):
     slownik['ilosc_zmian_pn_sb_dzien'] = sum(ilosc_zmian_pn_sb_dzien)
     slownik['ilosc_zmian_pn_sb_noc'] = sum(ilosc_zmian_pn_sb_noc)
     slownik['ilosc_zmian'] = slownik['ilosc_zmian_nd_dzien'] + slownik['ilosc_zmian_nd_noc'] +slownik['ilosc_zmian_pn_sb_noc'] + slownik['ilosc_zmian_pn_sb_dzien']
+    slownik['od'] = kalend[0][1]
+    slownik['do'] = kalend[-1][1]
+    print(slownik)
     return kalend, slownik, grafik
 
 
@@ -103,9 +108,9 @@ def strona_glowna(request, month, year):
     plan = get_object_or_404(Plan, id=1)
     data = datetime.date(day=1,month=month, year=year)
     kalend, slownik, grafik = oblicz_kalendarz(plan, data)
-
     wszyscy_pracownicy = plan.pracownik_set.all()
     numery_wszystkich_pracownikow = [x.numer for x in wszyscy_pracownicy]
+
     pula_godzin = slownik.get('ilosc_zmian')*12
 
 
@@ -119,16 +124,25 @@ def strona_glowna(request, month, year):
         dni_zero_miejsc = [doba.data for doba in
                             Doba.objects.all().filter(grafik=grafik).filter(min_pracownicy_dzien=0)]
         prosby = [x.data for x in Prosba.objects.all().filter(pracownik=pracownik).filter(dzien=True)]
+
+
         wyklucz = list(doby_wykluczajace + dni_wykluczajace +dni_zero_miejsc +prosby)
+        if pracownik.dni_urlopu is not None:
+
+            [wyklucz.append(x) for x in pracownik.dni_urlopu]
 
         dni_losowe = list(set(dni) - set(wyklucz))
         if dni_losowe == []:
             return None
         data_wylosowana = random.choice(dni_losowe)
+
+
         d = get_object_or_404(Doba, grafik=grafik, data=data_wylosowana)
         d.pracownicy_dzien.add(pracownik)
         d.min_pracownicy_dzien = d.min_pracownicy_dzien -1
         d.save()
+        pracownik.ilosc_godzin = pracownik.ilosc_godzin -12
+        pracownik.save()
         return True
 
 
@@ -143,7 +157,12 @@ def strona_glowna(request, month, year):
                             Doba.objects.all().filter(grafik=grafik).filter(min_pracownicy_noc=0)]
         prosby = [x.data for x in
                   Prosba.objects.all().filter(pracownik=pracownik).filter(noc=True)]
-        wyklucz = list(doby_wykluczajace + noce_wykluczajace +dni_zero_miejsc+prosby)
+
+        wyklucz = list(doby_wykluczajace + noce_wykluczajace + dni_zero_miejsc + prosby )
+        if pracownik.dni_urlopu is not None:
+
+            [wyklucz.append(x) for x in pracownik.dni_urlopu]
+
         noce_losowe = list(set(dni) - set(wyklucz))
         if noce_losowe == []:
             return None
@@ -153,27 +172,48 @@ def strona_glowna(request, month, year):
         d.pracownicy_noc.add(pracownik)
         d.min_pracownicy_noc = d.min_pracownicy_noc -1
         d.save()
+        pracownik.ilosc_godzin = pracownik.ilosc_godzin -12
+        pracownik.save()
         return True
 
 
     for pracownik in wszyscy_pracownicy:
-        pracownik.ilosc_godzin = slownik.get('ilosc_godzin')
+        ilosc_godzin = slownik.get('ilosc_godzin')
+        urlop = Urlop.objects.all().filter(pracownik=pracownik).filter(Q(data_od__range = [slownik.get('od'),slownik.get('do')]) | Q(data_do__range = [slownik.get('od'),slownik.get('do')]))
+        if urlop:
+            dni_urlopu = []
+            [x.lista_dat(dni_urlopu) for x in urlop]
+            pracownik.dni_urlopu = dni_urlopu
+            for dzien in dni_urlopu:
+                if dzien.weekday() in [5,6]:
+                    dni_urlopu.remove(dzien)
+            ilosc_godzin = ilosc_godzin - (7.5833 * len(dni_urlopu))
+
+        pracownik.ilosc_godzin = ilosc_godzin
         pracownik.save()
+
 
 
 
 
     while True:
         if pula_godzin > 0:
+
+
             if len(numery_wszystkich_pracownikow)>0:
                 numer = random.choice(numery_wszystkich_pracownikow)
                 numery_wszystkich_pracownikow.remove(numer)
             else:
-                numery_wszystkich_pracownikow = [x.numer for x in wszyscy_pracownicy]
+                numery_wszystkich_pracownikow = [x.numer for x in wszyscy_pracownicy.filter(ilosc_godzin__gt=12)]
+                if len(numery_wszystkich_pracownikow) <1:
+                    return render(request, 'main.html', {'kalend': kalend, })
                 numer = random.choice(numery_wszystkich_pracownikow)
                 numery_wszystkich_pracownikow.remove(numer)
 
+
             pracownik = get_object_or_404(Pracownik, numer=numer)
+
+
 
 
 

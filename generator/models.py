@@ -1,8 +1,11 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.contrib.auth.models import User
-
-
+import datetime
+import calendar
 # Create your models here.
+from django.urls import reverse_lazy
+
 DZIEN_CHOICES = (('None','None'), ('0','Poniedzialek'), ('1','Wtorek'), ('2','Sroda'), ('3','Czwartek'), ('4','Piatek'), ('5','Sobota'), ('6','Niedziela'),('14','Pon-Pt'),('15','Pon-Sb'), ('56','Weekend'), ('Wszystkie','Wszystkie'),  )
 
 
@@ -14,6 +17,12 @@ class Plan(models.Model):
     nazwa = models.CharField(max_length=200, db_index=True)
     slug = models.SlugField(max_length=200, unique=True, db_index=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.nazwa)
+
+    def get_absolute_url(self):
+        return reverse_lazy('front:plan_update', self.id)
 
 class Dni_swiateczne(models.Model):
     class Meta:
@@ -38,7 +47,11 @@ class Regula(models.Model):
     data_od = models.DateField(blank=True, null=True)
     data_do = models.DateField(blank=True, null=True)
 
+    def __str__(self):
+        return str(self.nazwa)
 
+    def get_absolute_url(self):
+        return reverse_lazy('front:plan_update', kwargs ={'pk' : self.plan.id})
 
 
 class Pracownik(models.Model):
@@ -54,9 +67,36 @@ class Pracownik(models.Model):
     adres = models.TextField(max_length=500, blank = True)
     ilosc_godzin = models.SmallIntegerField(default=160)
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+    dni_urlopu = ArrayField(models.DateField(blank=True, null=True),blank=True, null=True)
 
     def __str__(self):
         return str(self.numer)
+
+    def get_absolute_url(self):
+        return reverse_lazy('front:pracownik_detail', kwargs ={'pk' : self.id})
+
+
+class Urlop(models.Model):
+    class Meta:
+        verbose_name = 'Urlop'
+        verbose_name_plural = 'Urlopy'
+
+    pracownik = models.ForeignKey(Pracownik, on_delete=models.CASCADE, related_name='urlopy')
+    data_od = models.DateField(blank=True, null=True)
+    data_do = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return str('Urlop:')+ str(self.pracownik.nazwisko)+ ' '+str(self.data_od)
+
+    def lista_dat(self, lista):
+        while True:
+            if self.data_od != self.data_do:
+                lista.append(self.data_do)
+                self.data_do = self.data_do - datetime.timedelta(days=1)
+            else:
+                lista.append(self.data_od)
+                return lista
+
 
 class Prosba(models.Model):
     class Meta:
@@ -66,10 +106,10 @@ class Prosba(models.Model):
     dzien = models.BooleanField()
     noc = models.BooleanField()
     data =  models.DateField(blank=True, null=True)
-    pracownik = models.ForeignKey(Pracownik, on_delete=models.CASCADE)
+    pracownik = models.ForeignKey(Pracownik, on_delete=models.CASCADE, related_name='prosby')
 
     def __str__(self):
-        return str(self.pracownik.nazwisko)+ ' '+str(self.data)
+        return str('Prośba:')+ str(self.pracownik.nazwisko)+ ' '+str(self.data)
 
 
 class Grafik(models.Model):

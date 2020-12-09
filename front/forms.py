@@ -2,10 +2,11 @@
 from crispy_forms.layout import Layout, Field, Fieldset, Div, HTML, ButtonHolder, Submit
 from django import forms
 from django.contrib.auth.models import User
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, ModelChoiceField, SelectDateWidget, DateInput
+
 
 from .models import Profile
-from generator.models import Plan, Dni_swiateczne
+from generator.models import Plan, Dni_swiateczne, Regula, Urlop, Pracownik, Prosba
 from .formset import *
 
 class LoginForm(forms.Form):
@@ -39,6 +40,98 @@ class ProfileEditForm(forms.ModelForm):
         fields = ('PWZ',)
 
 
+class UrlopForm(forms.ModelForm):
+    class Meta:
+        model = Urlop
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(UrlopForm, self).__init__(*args, **kwargs)
+        self.fields['data_od'] = forms.DateField(widget = SelectDateWidget())
+        self.fields['data_do'] = forms.DateField(widget = SelectDateWidget())
+
+
+
+UrlopFormSet = inlineformset_factory(
+    parent_model=Pracownik, model=Urlop, form=UrlopForm,
+    fields=['data_od', 'data_do' ], extra=1, can_delete=True)
+
+
+class PracownikUrlopForm(forms.ModelForm):
+
+    class Meta:
+        model = Pracownik
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super(PracownikUrlopForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = True
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-md-3 create-label'
+        self.helper.field_class = 'col-md-9'
+        self.helper.layout = Layout(
+            Div(
+
+                Fieldset('Dodaj daty urlopu',
+                    Formset('urlopy')),
+                HTML("<br>"),
+                ButtonHolder(Submit('submit', 'Zapisz')),
+                )
+            )
+
+
+
+
+
+
+
+class ProsbaForm(forms.ModelForm):
+    class Meta:
+        model = Prosba
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(ProsbaForm, self).__init__(*args, **kwargs)
+        self.fields['data'] = forms.DateField(widget = SelectDateWidget())
+
+
+
+
+ProsbaFormSet = inlineformset_factory(
+    parent_model=Pracownik, model=Prosba, form=ProsbaForm,
+    fields=['data', 'dzien', 'noc' ], extra=1, can_delete=True)
+
+
+class PracownikProsbaForm(forms.ModelForm):
+
+    class Meta:
+        model = Pracownik
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super(PracownikProsbaForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = True
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-md-3 create-label'
+        self.helper.field_class = 'col-md-9'
+        self.helper.layout = Layout(
+            Div(
+
+                Fieldset('Dodaj daty próśb',
+                    Formset('prosby')),
+                HTML("<br>"),
+                ButtonHolder(Submit('submit', 'Zapisz')),
+                )
+            )
+
+
+
+
+
+
+
 
 
 
@@ -46,7 +139,12 @@ class DniSwiateczneForm(forms.ModelForm):
 
     class Meta:
         model = Dni_swiateczne
-        fields = '__all__'
+        fields = ['data',]
+
+    def __init__(self, *args, **kwargs):
+        super(DniSwiateczneForm, self).__init__(*args, **kwargs)
+        self.fields['data'] = forms.DateField(widget = DateInput(format=('%d-%m-%Y')))
+
 
 DzienSwiatecznyFormSet = inlineformset_factory(
     parent_model=Plan, model=Dni_swiateczne, form=DniSwiateczneForm,
@@ -76,3 +174,15 @@ class PlanCreateForm(forms.ModelForm):
                 ButtonHolder(Submit('submit', 'Zapisz')),
                 )
             )
+
+
+class RegulaForm(forms.ModelForm):
+    class Meta:
+        model = Regula
+        fields = ['nazwa', 'plan', 'ilosc_pracownikow_dzien', 'ilosc_pracownikow_noc', 'dzien', 'data_od', 'data_do']
+
+    def __init__(self,  *args, **kwargs):
+        user = kwargs.pop("user")
+        super(RegulaForm, self).__init__(*args, **kwargs)
+        self.fields['plan'] =  ModelChoiceField(queryset=Plan.objects.all().filter(user = user))
+

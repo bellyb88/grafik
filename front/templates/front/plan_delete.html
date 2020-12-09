@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Usuń plan{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+           Usuń plan
+        </div>
+<form method="post">{% csrf_token %}
+    <p>Jesteś pewny żeby usunąć plan:  "{{ object.nazwa }}"?</p>
+    <input type="submit" value="Confirm">
+</form>
+    </div>
+</div>
+{%endblock%}
